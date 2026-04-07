@@ -186,17 +186,6 @@ After setup, verify all of the following:
 - `src/codex/provider.ts`: local `codex.exe` runner
 - `src/wechat/`: WeChat API, login, media, monitor, send logic
 - `src/session.ts`: per-contact session persistence and token ledger state
-- `wechat-codex-direct/`: installable Codex skill folder for reusing this bridge
-
-## Installable Skill
-
-This repository also includes a standard Codex skill folder at:
-
-```text
-wechat-codex-direct/
-```
-
-Copy that folder into another Codex instance's `$CODEX_HOME/skills/` or `~/.codex/skills/` to give it the installation and operation playbook for this bridge.
 
 ## Troubleshooting
 

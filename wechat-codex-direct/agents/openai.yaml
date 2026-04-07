@@ -1,0 +1,4 @@
+interface:
+  display_name: "WeChat Codex Direct"
+  short_description: "Install, run, or inspect a direct WeChat-to-Codex bridge."
+  default_prompt: "Use $wechat-codex-direct to install, configure, validate, troubleshoot, or inspect the bundled reference implementation for a WeChat bridge that sends messages directly to the local logged-in Codex CLI."

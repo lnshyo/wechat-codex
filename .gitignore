@@ -1,0 +1,13 @@
+node_modules/
+dist/
+reference_repo/
+*.log
+downloads/
+_reference_wechat_claude_code/
+.codex-temp/
+.tmp-openclaw/
+USER.md
+soul.md
+SESSION-STATE.md
+MEMORY.md
+memory/

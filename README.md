@@ -1,28 +1,36 @@
 # wechat-codex
 
-Connect a personal WeChat account to the local Codex CLI that is already logged in on the same machine.
+[![CI](https://github.com/lnshyo/wechat-codex/actions/workflows/ci.yml/badge.svg)](https://github.com/lnshyo/wechat-codex/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-This project is a direct WeChat-to-Codex bridge. It does not depend on OpenClaw and does not require `OPENAI_API_KEY` if local Codex is already authenticated.
+Bridge a personal WeChat account directly to the local Codex CLI already logged in on the same machine.
 
-## What It Does
+`wechat-codex` is a direct WeChat-to-Codex bridge. It does not depend on OpenClaw and does not require `OPENAI_API_KEY` when local Codex is already authenticated.
 
-- Receive personal WeChat messages and send them to local `codex.exe`
-- Keep one Codex thread per WeChat contact
-- Queue multiple tasks per contact with FIFO execution
-- Support image input from WeChat
-- Expose a lightweight gateway-style control surface directly in WeChat
-- Prefer native WeChat typing status when available
-- Fall back to WeChat `GENERATING` state when typing is unavailable
-- Run in the foreground or as a detached background process
-- On Windows, prefer per-user logon autostart over SCM Windows service hosting
+## Why This Exists
+
+- Chat with local Codex from WeChat without adding a separate cloud relay
+- Keep one isolated Codex thread per WeChat contact
+- Let Codex answer normal text messages directly, while still exposing lightweight slash commands for control
+- Support both foreground running and persistent background hosting on Windows
+
+## Features
+
+- Direct text-to-Codex routing from personal WeChat
+- Per-contact thread isolation and FIFO task queueing
+- WeChat image input forwarding
+- Native WeChat typing state with `GENERATING` fallback
+- Local `/sync` mode that mirrors replies from the latest matching Codex Desktop session
+- Local token usage estimation and chat health/status commands
+- Windows-friendly background hosting with recommended logon autostart
 
 ## WeChat Commands
 
-The bridge handles these exact slash commands locally:
+The bridge handles these commands locally:
 
 - `/new` resets the current contact's saved Codex thread, queue, and token ledger
-- `/sync` attaches the current contact to the latest local Codex Desktop companion session for the configured working directory, with transcript fallback, and starts syncing from the current transcript end without replaying history
-- `/unsync` detaches the current contact from the attached local Codex session while keeping the saved thread id
+- `/sync` attaches the current contact to the latest local Codex Desktop session for the configured working directory
+- `/unsync` detaches the current contact from local Codex sync while keeping the saved thread id
 - `/status` shows the current chat session state
 - `/token` shows the current chat token budget summary using local estimates
 - `/task` shows the active task and queued tasks for the current chat
@@ -31,25 +39,11 @@ The bridge handles these exact slash commands locally:
 
 Unknown slash commands still go through to Codex as normal chat input.
 
-## Current Behavior
-
-- Normal text messages become Codex tasks
-- If a chat is already busy, new messages are queued automatically
-- Image messages are downloaded immediately and forwarded to Codex later if queued
-- Each WeChat contact gets an isolated Codex conversation and task queue
-- A chat can optionally attach to the latest local interactive Codex Desktop session for the configured working directory via `/sync`
-- When a chat is attached, the bridge tails the local Codex transcript and mirrors only new assistant replies generated after the bind point
-- `/sync` now prefers Codex Desktop `threads` state as the local companion authority and falls back to transcript discovery only when no matching desktop thread is found
-- WeChat-triggered Codex sessions run with full local access and no approval prompts, equivalent to `--dangerously-bypass-approvals-and-sandbox`
-- The first task in a fresh Codex thread, including the first message after `/new`, injects a bootstrap instruction that tells Codex to read `AGENTS.md` first and then follow its startup read order before replying
-- Token usage is tracked locally with conservative estimates, including estimated remaining context budget
-- The bridge stores per-contact routing state and token ledger data locally
-
 ## Requirements
 
-- Node.js 18+
+- Node.js 22+
 - A personal WeChat account that can complete QR binding
-- A working local Codex CLI login on this machine
+- A working local Codex CLI login on the same machine
 
 Recommended check:
 
@@ -63,14 +57,16 @@ Default Codex executable path used by setup:
 C:\Users\<you>\.codex\.sandbox-bin\codex.exe
 ```
 
-## Install
+## Quick Start
+
+Install and build:
 
 ```bash
 npm install
 npm run build
 ```
 
-## First-Time Setup
+Run first-time setup:
 
 ```bash
 npm run setup
@@ -94,18 +90,6 @@ On Windows this is usually:
 ```text
 C:\Users\<you>\.wechat-codex\
 ```
-
-## Optional Config
-
-`config.env` also supports:
-
-```text
-sessionTokenBudget=120000
-sessionReplyReserveTokens=4096
-maxQueuedTasksPerPeer=5
-```
-
-These values control the estimated remaining context budget and the per-contact queue limit.
 
 ## Run
 
@@ -135,37 +119,62 @@ Optional Windows service install:
 npm run service -- install
 ```
 
-Status:
+Other useful service commands:
 
 ```bash
 npm run service -- status
-```
-
-Restart:
-
-```bash
 npm run service -- restart
-```
-
-Stop:
-
-```bash
 npm run service -- stop
-```
-
-Uninstall the Windows service:
-
-```bash
 npm run service -- uninstall
-```
-
-Logs:
-
-```bash
 npm run logs
 ```
 
-## Verify
+## Optional Config
+
+`config.env` also supports:
+
+```text
+sessionTokenBudget=120000
+sessionReplyReserveTokens=4096
+maxQueuedTasksPerPeer=5
+```
+
+These values control estimated remaining context budget and the per-contact queue limit.
+
+## How It Works
+
+- Normal WeChat text messages become Codex tasks
+- Busy chats queue new work automatically
+- Image messages are downloaded immediately and forwarded when their turn runs
+- Each WeChat contact gets an isolated Codex conversation and local session state
+- `/sync` can bind a chat to the latest local interactive Codex Desktop session for the configured working directory
+- When a chat is attached, the bridge mirrors only fresh assistant replies created after the bind point
+- WeChat-triggered Codex sessions run with full local access and no approval prompts
+- Fresh Codex threads inject a bootstrap instruction that tells Codex to read `AGENTS.md` first and then follow its startup read order before replying
+
+## Development
+
+Build:
+
+```bash
+npm run build
+```
+
+Test:
+
+```bash
+npm test
+```
+
+Project layout:
+
+- `src/main.ts`: WeChat receive loop, command handling, queueing, typing, and Codex execution
+- `src/gateway/`: command routing, token estimation, and runtime state
+- `src/codex/`: local `codex.exe` execution, transcript sync, and companion discovery
+- `src/wechat/`: WeChat API, login, media, polling, and sending
+- `src/tests/`: source-level test coverage for the bridge runtime
+
+## Verify After Setup
 
 After setup, verify all of the following:
 
@@ -179,26 +188,15 @@ After setup, verify all of the following:
 7. An image sent from WeChat can be analyzed by Codex
 8. After sending `/sync` from WeChat, the bridge reports the attached local Codex session source and title, then mirrors only subsequent local assistant replies back to that chat
 
-## Project Layout
-
-- `src/main.ts`: WeChat receive, queue, command handling, typing, and Codex execution
-- `src/gateway/`: lightweight gateway runtime, commands, token estimation, and renderers
-- `src/codex/provider.ts`: local `codex.exe` runner
-- `src/wechat/`: WeChat API, login, media, monitor, send logic
-- `src/session.ts`: per-contact session persistence and token ledger state
-
 ## Troubleshooting
 
 - If WeChat does not receive replies, check `codex login status`, `npm run service -- status`, and `npm run logs`
 - If typing does not appear, the bridge should fall back to `GENERATING`; inspect logs for `getconfig` or `sendtyping` failures
-- If the active queue fills up, the bridge will reject new work until you clear it with `/stop`
+- If the active queue fills up, clear it with `/stop`
 - If a resumed Codex thread fails, the bridge starts a new thread and resets the local token ledger for that contact
-- If `/sync` cannot find a local Codex session, make sure the Codex Desktop conversation you want is already open in the same configured working directory
-- If `/sync` binds the wrong thread, resend `/sync` after bringing the desired Codex Desktop thread to the front; the bridge now prefers the latest matching desktop thread and only falls back to transcript scan if no desktop thread matches
-- `/sync` intentionally drops all transcript history and starts from the current tail; if you need earlier content, view it in Codex Desktop instead of WeChat
-- On Windows, prefer `npm run switch-to-logon-autostart`; it restores the old detached background mode and registers user-logon autostart without using SCM service hosting
-- If you intentionally keep the optional Windows service mode, later code changes usually only need `npm run build` plus `npm run service -- restart`
-- If you want to start over in the current WeChat chat, send `/new`
+- If `/sync` cannot find a local Codex session, open the target Codex Desktop conversation in the same configured working directory first
+- If `/sync` binds the wrong thread, resend `/sync` after bringing the desired Codex Desktop thread to the front
+- `/sync` intentionally drops historical transcript content; older content should be viewed in Codex Desktop instead of WeChat
 
 ## Chinese Documentation
 

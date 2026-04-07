@@ -17,8 +17,10 @@
 
 ## 微信命令
 
+bridge 会在本地处理这些命令：
+
 - `/new`：重置当前联系人的线程、队列和 token 账本
-- `/sync`：把当前联系人绑定到当前工作目录下最新的本地 Codex Desktop 会话；优先使用 Desktop `threads`，没有匹配时才回退到 transcript 扫描
+- `/sync`：把当前联系人绑定到当前工作目录下最新的本地 Codex Desktop 会话，优先使用 Desktop `threads`，没有匹配时再回退到 transcript 扫描
 - `/unsync`：断开当前联系人和本地 Codex 会话的同步，但保留已保存的线程 id
 - `/status`：查看当前会话状态
 - `/token`：查看当前会话的本地 token 估算
@@ -35,8 +37,8 @@
 - 图片消息会先下载，执行时再转发给 Codex
 - 不同联系人之间上下文和队列完全隔离
 - 当前聊天可以通过 `/sync` 绑定到同一工作目录下的本地交互式 Codex Desktop 会话
-- 绑定后，bridge 只会把绑定之后产生的本地 assistant 新回复同步回微信
-- `/sync` 会直接丢弃所有历史 transcript，不回放最近窗口记录，也不会回显本地用户输入
+- 绑定后，bridge 只会把绑定之后新产生的本地 assistant 回复同步回微信
+- `/sync` 现在优先使用 Codex Desktop `threads` 作为本地 companion authority，没有匹配时才回退到 transcript 扫描
 - 微信侧触发的 Codex 会话以完全本地访问模式运行，等价于 `--dangerously-bypass-approvals-and-sandbox`
 - 新线程的第一条任务，包括 `/new` 之后的第一条消息，会先注入一条 bootstrap 提示，要求 Codex 先读取 `AGENTS.md` 再按本地启动顺序加载记忆
 - token 指标是本地保守估算，不代表底层模型真实剩余额度
@@ -165,7 +167,7 @@ npm run logs
 
 建议验证：
 
-1. `npm run service -- status` 显示 bridge 正在运行
+1. `npm run service -- status` 显示 bridge 正在运行  
    Windows 上推荐看到的是 `background`，不是 `windows-service`
 2. 从微信发送文本后，能很快看到 typing 或 `GENERATING`
 3. 最终能收到 Codex 回复
@@ -180,22 +182,8 @@ npm run logs
 - `src/main.ts`：微信收消息、命令分流、任务排队、typing、Codex 执行
 - `src/gateway/`：轻量 gateway runtime、命令、token 估算和状态渲染
 - `src/codex/provider.ts`：本地 `codex.exe` 调用层
-- `src/codex/transcript.ts`：本地 Codex transcript 解析
-- `src/codex/companion.ts`：本地 Codex Desktop 线程发现与回退逻辑
-- `src/codex/local-sync.ts`：本地 transcript 跟踪与微信回流
 - `src/wechat/`：微信 API、登录、媒体、轮询、发送逻辑
-- `src/session.ts`：按联系人保存会话、token 账本和本地同步状态
-- `wechat-codex-direct/`：可复用的标准 Codex skill 文件夹
-
-## 可复用 Skill
-
-仓库内自带一个标准 skill 文件夹：
-
-```text
-wechat-codex-direct/
-```
-
-如果你想把这套能力给别的 Codex 实例使用，直接复制到对方的 `$CODEX_HOME/skills/` 或 `~/.codex/skills/` 即可。
+- `src/session.ts`：按联系人保存会话和 token 账本
 
 ## 排障
 

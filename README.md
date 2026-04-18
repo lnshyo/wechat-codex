@@ -111,7 +111,9 @@ Switch Windows to the recommended logon-autostart mode:
 npm run switch-to-logon-autostart
 ```
 
-This removes the WinSW Windows service, registers a per-user Scheduled Task named `wechat-codex-logon`, and starts the old detached background mode immediately.
+This removes the WinSW Windows service, registers a per-user Scheduled Task named `wechat-codex-logon`, and starts that Scheduled Task immediately so the bridge comes up through the normal user-task path.
+
+The scheduled task now starts the bridge silently through a hidden PowerShell launcher. You should no longer need to keep a visible `CMD` window open after login, and closing a console window is no longer part of the normal runtime path.
 
 Optional Windows service install:
 
@@ -128,6 +130,8 @@ npm run service -- stop
 npm run service -- uninstall
 npm run logs
 ```
+
+For silent-mode troubleshooting, use `npm run service -- status` and `npm run logs` instead of relying on a visible console window.
 
 ## Optional Config
 

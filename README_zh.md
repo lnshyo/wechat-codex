@@ -110,6 +110,8 @@ npm run switch-to-logon-autostart
 
 这条命令会删除 WinSW Windows 服务，注册当前用户登录自启任务 `wechat-codex-logon`，并立即启动旧的 detached 后台模式。
 
+现在登录自启任务会通过隐藏的 PowerShell 启动器静默拉起 bridge，不再依赖可见的 `CMD` 窗口常驻。正常情况下登录后不需要保留一个黑色控制台窗口来维持微信桥接。
+
 如需保留可选的 Windows 服务模式：
 
 ```bash
@@ -125,6 +127,8 @@ npm run service -- stop
 npm run service -- uninstall
 npm run logs
 ```
+
+静默模式排障时，优先使用 `npm run service -- status` 和 `npm run logs`，而不是观察桌面上是否出现控制台窗口。
 
 ## 可选配置
 

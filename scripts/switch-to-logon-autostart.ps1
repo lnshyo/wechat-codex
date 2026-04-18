@@ -36,6 +36,7 @@ Ensure-Elevated
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $nodePath = Resolve-NodePath
+$hiddenLauncherPath = Join-Path $PSScriptRoot 'start-hidden-background.ps1'
 $serviceName = 'wechat-codex'
 $taskName = 'wechat-codex-logon'
 $serviceHome = Join-Path $env:USERPROFILE '.wechat-codex\\windows-service'
@@ -43,6 +44,10 @@ $entryPath = Join-Path $repoRoot 'dist\\main.js'
 
 if (-not (Test-Path $entryPath)) {
   throw "Build output not found: $entryPath. Run npm run build first."
+}
+
+if (-not (Test-Path $hiddenLauncherPath)) {
+  throw "Hidden launcher script not found: $hiddenLauncherPath"
 }
 
 Write-Host 'Removing Windows service...' -ForegroundColor Cyan
@@ -68,14 +73,22 @@ if (Test-Path $serviceHome) {
 }
 
 Write-Host 'Registering user-logon task...' -ForegroundColor Cyan
-$action = New-ScheduledTaskAction -Execute $nodePath -Argument 'dist/main.js start' -WorkingDirectory $repoRoot
+$taskArguments = @(
+  '-WindowStyle Hidden',
+  '-NoProfile',
+  '-ExecutionPolicy Bypass',
+  ('-File "{0}"' -f $hiddenLauncherPath)
+) -join ' '
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $taskArguments -WorkingDirectory $repoRoot
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\\$env:USERNAME"
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Start wechat-codex direct background daemon at user logon.' -Force | Out-Null
 
-Write-Host 'Starting background mode now...' -ForegroundColor Cyan
-& $nodePath $entryPath service start
+Write-Host 'Starting logon task now...' -ForegroundColor Cyan
+Start-ScheduledTask -TaskName $taskName
+Start-Sleep -Seconds 3
 
 Write-Host 'Final status:' -ForegroundColor Cyan
+Get-ScheduledTask -TaskName $taskName | Select-Object TaskName, State | Format-Table -AutoSize | Out-Host
 & $nodePath $entryPath service status

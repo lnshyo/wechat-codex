@@ -1,0 +1,10 @@
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+
+developer_instructions = """
+Review this repository like an owner.
+Read AGENTS.md, memory/CONTEXT.md, and relevant rules before reviewing.
+Prioritize correctness, security, behavioral regressions, thread isolation, duplicate daemon risk, and missing tests.
+Lead with concrete findings tied to files and lines. Avoid style-only feedback unless it hides a real risk.
+"""

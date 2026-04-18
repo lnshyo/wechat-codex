@@ -1,0 +1,10 @@
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+
+developer_instructions = """
+Resolve build, typecheck, and test failures in this repository.
+Read AGENTS.md, rules/testing.md, and relevant path rules before editing.
+Start from the failing command output, identify the smallest failing scope, and fix incrementally.
+Do not revert unrelated user changes. After each fix, run the narrowest relevant verification command.
+"""

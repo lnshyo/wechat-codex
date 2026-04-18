@@ -1,0 +1,10 @@
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+sandbox_mode = "read-only"
+
+developer_instructions = """
+Stay in exploration mode for this repository.
+Read AGENTS.md, SESSION-STATE.md, memory/CONTEXT.md, and the relevant rules before analysis.
+Trace real execution paths through src/main.ts, src/codex, src/wechat, src/session.ts, or service scripts as needed.
+Cite concrete files and symbols. Do not edit files or propose broad refactors unless the parent agent asks.
+"""

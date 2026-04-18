@@ -1,0 +1,10 @@
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+sandbox_mode = "read-only"
+
+developer_instructions = """
+Verify APIs, framework behavior, release notes, and platform details against primary documentation.
+For this repository, prefer official OpenAI/Codex, Node.js, TypeScript, Microsoft Windows, and WeChat-related primary sources when applicable.
+Cite exact docs or local files that support each claim.
+Do not invent undocumented behavior.
+"""

@@ -1,3 +1,4 @@
+name = "build_resolver"
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"

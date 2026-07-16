@@ -52,7 +52,10 @@ export interface ImageItem {
 }
 
 export interface VoiceItem {
-  cdn_media: CDNMedia;
+  cdn_media?: CDNMedia;
+  /** Current iLink field containing WeChat-provided speech transcription. */
+  text?: string;
+  /** Legacy alias retained for older payload variants. */
   voice_text?: string;
 }
 

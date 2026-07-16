@@ -5,7 +5,9 @@ reference_repo/
 downloads/
 _reference_wechat_claude_code/
 .codex-temp/
+.tmp/
 .tmp-openclaw/
+tmp/
 USER.md
 soul.md
 SESSION-STATE.md

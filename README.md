@@ -17,12 +17,14 @@ Bridge a personal WeChat account directly to the local Codex CLI already logged 
 ## Features
 
 - Direct text-to-Codex routing from personal WeChat
+- WeChat voice messages through the transcription already supplied by WeChat
 - Per-contact thread isolation and FIFO task queueing
 - WeChat image input forwarding
 - Native WeChat typing state with `GENERATING` fallback
 - Local `/sync` mode that mirrors replies from the latest matching Codex Desktop session
 - Local token usage estimation and chat health/status commands
 - Windows-friendly background hosting with recommended logon autostart
+- Authenticated HTTPS/SSE transport for bridge-owned Codex calls, with WebSocket disabled
 
 ## WeChat Commands
 
@@ -148,13 +150,16 @@ These values control estimated remaining context budget and the per-contact queu
 ## How It Works
 
 - Normal WeChat text messages become Codex tasks
+- Voice messages use `voice_item.text`, with the legacy `voice_text` field as fallback; the bridge does not download audio or run local speech-to-text
 - Busy chats queue new work automatically
 - Image messages are downloaded immediately and forwarded when their turn runs
 - Each WeChat contact gets an isolated Codex conversation and local session state
 - `/sync` can bind a chat to the latest local interactive Codex Desktop session for the configured working directory
 - When a chat is attached, the bridge mirrors only fresh assistant replies created after the bind point
 - WeChat-triggered Codex sessions run with full local access and no approval prompts
-- Fresh Codex threads inject a bootstrap instruction that tells Codex to read `AGENTS.md` first and then follow its startup read order before replying
+- Bridge-owned Codex sessions force the authenticated Responses HTTPS provider and disable WebSocket transport
+- Bridge-owned Codex children disable unrelated global MCP servers through process-only overrides to reduce startup latency; Codex Desktop and global MCP settings are unchanged
+- Fresh Codex threads preload one capped startup-memory snapshot in repository order; resumed threads do not repeat the bootstrap
 
 ## Development
 
@@ -190,7 +195,8 @@ After setup, verify all of the following:
 5. A queued task can be inspected with `/task`
 6. `/token` returns an estimated token summary for the current chat
 7. An image sent from WeChat can be analyzed by Codex
-8. After sending `/sync` from WeChat, the bridge reports the attached local Codex session source and title, then mirrors only subsequent local assistant replies back to that chat
+8. A WeChat voice message with a platform transcription reaches Codex as text
+9. After sending `/sync` from WeChat, the bridge reports the attached local Codex session source and title, then mirrors only subsequent local assistant replies back to that chat
 
 ## Troubleshooting
 

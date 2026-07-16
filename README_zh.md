@@ -14,12 +14,14 @@
 ## 功能
 
 - 个人微信文本消息直连本地 Codex
+- 使用微信已经提供的转写文本处理语音消息
 - 按联系人隔离线程并使用 FIFO 队列
 - 支持微信图片输入
 - 优先使用微信原生 typing 状态，失败时回退到 `GENERATING`
 - 支持 `/sync`，可镜像本地 Codex Desktop 会话的新回复
 - 提供本地 token 估算、状态和健康检查命令
 - Windows 推荐使用登录自启的后台模式
+- bridge 自己发起的 Codex 调用固定使用已登录身份的 HTTPS/SSE 通道，并禁用 WebSocket
 
 ## 微信命令
 
@@ -145,13 +147,16 @@ maxQueuedTasksPerPeer=5
 ## 工作方式
 
 - 普通微信文本消息会直接变成 Codex 任务
+- 语音消息优先读取 `voice_item.text`，并兼容旧字段 `voice_text`；bridge 不下载音频，也不运行本地语音识别
 - 聊天正在忙时，新任务会自动排队
 - 图片消息会先下载，再在执行时转发给 Codex
 - 每个微信联系人都有独立的 Codex 会话和本地状态
 - `/sync` 可以把当前聊天绑定到同一工作目录下最新的本地 Codex Desktop 会话
 - 绑定后，bridge 只会同步绑定点之后新产生的 assistant 回复
 - 微信侧触发的 Codex 会话以完全本地访问模式运行，不需要审批
-- 新线程第一条任务会注入 bootstrap 提示，要求 Codex 先读取 `AGENTS.md` 再继续处理
+- bridge 自己发起的 Codex 会话固定使用已登录身份的 Responses HTTPS provider，并禁用 WebSocket
+- bridge 启动的 Codex 子进程会通过仅对本进程生效的覆盖项禁用无关全局 MCP，以降低启动延迟；Codex Desktop 和全局 MCP 配置不受影响
+- 新线程会按仓库顺序一次性预载带大小上限的启动记忆快照；恢复旧线程时不会重复注入
 
 ## 开发
 
@@ -187,7 +192,8 @@ npm test
 5. `/task` 能看到排队状态
 6. `/token` 能返回当前会话的 token 估算
 7. 微信发图后，Codex 能正常分析
-8. 发送 `/sync` 后，bridge 会返回绑定到的本地 Codex 会话来源和标题；之后只同步新的本地 assistant 回复
+8. 微信语音已有平台转写时，能作为文本正常交给 Codex
+9. 发送 `/sync` 后，bridge 会返回绑定到的本地 Codex 会话来源和标题；之后只同步新的本地 assistant 回复
 
 ## 排障
 

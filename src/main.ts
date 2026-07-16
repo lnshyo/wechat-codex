@@ -22,7 +22,12 @@ import {
 } from './codex/provider.js';
 import { handleGatewayCommand } from './gateway/commands.js';
 import { createGatewayRuntime } from './gateway/runtime.js';
-import { buildFreshSessionSystemPrompt, buildPrompt, buildTaskPreview } from './gateway/task-utils.js';
+import {
+  buildFreshSessionSystemPrompt,
+  buildPrompt,
+  buildSessionSystemPrompt,
+  buildTaskPreview,
+} from './gateway/task-utils.js';
 import { acquireDaemonLock, releaseDaemonLock } from './daemon-lock.js';
 import { logger } from './logger.js';
 import { createSessionStore } from './session.js';
@@ -38,7 +43,12 @@ import {
 import { loadLatestAccount, type AccountData } from './wechat/accounts.js';
 import { WeChatApi } from './wechat/api.js';
 import { startQrLogin, waitForQrScan } from './wechat/login.js';
-import { downloadImage, extractFirstImageUrl, extractText } from './wechat/media.js';
+import {
+  downloadImage,
+  extractFirstImageUrl,
+  extractText,
+  getMissingVoiceTranscriptReply,
+} from './wechat/media.js';
 import { createMonitor, type MonitorCallbacks } from './wechat/monitor.js';
 import { createSender, type ProgressState } from './wechat/send.js';
 import { MessageType, type WeixinMessage } from './wechat/types.js';
@@ -316,7 +326,7 @@ async function executeCodexRun(
   const retried = await runOnce({
     ...options,
     threadId: undefined,
-    systemPrompt: buildFreshSessionSystemPrompt(options.systemPrompt),
+    systemPrompt: buildFreshSessionSystemPrompt(options.systemPrompt, options.cwd),
   });
 
   return {
@@ -349,9 +359,11 @@ async function runGatewayTask(
 
   try {
     const currentSession = sessionStore.load(accountId, peerUserId);
-    const systemPrompt = currentSession.codexThreadId
-      ? config.systemPrompt
-      : buildFreshSessionSystemPrompt(config.systemPrompt);
+    const systemPrompt = buildSessionSystemPrompt(
+      config.systemPrompt,
+      config.workingDirectory,
+      !currentSession.codexThreadId,
+    );
     const result = await executeCodexRun(accountId, peerUserId, sessionStore, {
       prompt: task.promptText,
       cwd: config.workingDirectory,
@@ -419,8 +431,23 @@ async function handleMessage(
   const contextToken = message.context_token ?? '';
   const userText = extractTextFromItems(message.item_list);
   const imageItem = extractFirstImageUrl(message.item_list);
+  const missingVoiceTranscriptReply = getMissingVoiceTranscriptReply(message.item_list);
 
-  if (!userText && !imageItem) {
+  if (!userText.trim() && !imageItem) {
+    if (missingVoiceTranscriptReply) {
+      logger.warn('Inbound voice message has no WeChat transcription', {
+        itemCount: message.item_list.length,
+        hasContextToken: Boolean(contextToken),
+        hasMessageId: Boolean(message.message_id),
+      });
+      await sender.sendText(
+        fromUserId,
+        contextToken,
+        missingVoiceTranscriptReply,
+      );
+      return;
+    }
+
     await sender.sendText(fromUserId, contextToken, '\u6682\u4e0d\u652f\u6301\u8fd9\u79cd\u6d88\u606f\u7c7b\u578b\u3002');
     return;
   }

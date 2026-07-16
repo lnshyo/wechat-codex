@@ -3,16 +3,16 @@ multi_agent = true
 
 [agents.explorer]
 description = "Read-only codebase explorer for gathering evidence before changes are proposed."
-config_file = ".codex/agents/explorer.toml"
+config_file = "agents/explorer.toml"
 
 [agents.reviewer]
 description = "Repository reviewer focused on correctness, security, and missing tests."
-config_file = ".codex/agents/reviewer.toml"
+config_file = "agents/reviewer.toml"
 
 [agents.docs_researcher]
 description = "Documentation specialist that verifies APIs, framework behavior, and release notes."
-config_file = ".codex/agents/docs-researcher.toml"
+config_file = "agents/docs-researcher.toml"
 
 [agents.build_resolver]
 description = "Build and test failure resolver for TypeScript, Node.js, and Windows runtime issues."
-config_file = ".codex/agents/build-resolver.toml"
+config_file = "agents/build-resolver.toml"

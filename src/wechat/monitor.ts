@@ -5,6 +5,7 @@ import type { WeixinMessage } from './types.js';
 import { loadJson, saveJson } from '../store.js';
 import { DATA_DIR } from '../constants.js';
 import { join } from 'node:path';
+import { extractText } from './media.js';
 
 const SESSION_EXPIRED_ERRCODE = -14;
 const SESSION_EXPIRED_PAUSE_MS = 60 * 60 * 1000; // 1 hour
@@ -27,7 +28,7 @@ interface PersistentMessageDeduperOptions {
 
 function extractMessageText(message: WeixinMessage): string {
   return (message.item_list ?? [])
-    .map((item) => item.text_item?.text?.trim() ?? '')
+    .map((item) => extractText(item).trim())
     .filter(Boolean)
     .join('\n');
 }

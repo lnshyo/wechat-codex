@@ -41,6 +41,20 @@ const EXECUTABLE_CANDIDATES = [
   ),
 ];
 
+// Keep this explicit: Codex merges `mcp_servers={}` with the global config instead of
+// replacing it. These process-local overrides isolate only bridge-owned CLI children.
+const BRIDGE_DISABLED_MCP_SERVERS = [
+  'context7',
+  'exa',
+  'node_repl',
+  'omx_code_intel',
+  'omx_memory',
+  'omx_state',
+  'omx_trace',
+  'omx_wiki',
+  'openaiDeveloperDocs',
+] as const;
+
 function decodeDataUri(dataUri: string): { extension: string; bytes: Buffer } {
   const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
   if (!matches) {
@@ -112,7 +126,44 @@ export function buildExecutionModeArgs(): string[] {
   ];
 }
 
-function buildCommandArgs(options: RunCodexSessionOptions, imageFiles: string[]): string[] {
+export function buildHttpProviderArgs(): string[] {
+  return [
+    '-c',
+    'model_provider="wechat_http"',
+    '-c',
+    'model_providers.wechat_http.name="OpenAI HTTPS"',
+    '-c',
+    'model_providers.wechat_http.base_url="https://chatgpt.com/backend-api/codex"',
+    '-c',
+    'model_providers.wechat_http.wire_api="responses"',
+    '-c',
+    'model_providers.wechat_http.requires_openai_auth=true',
+    '-c',
+    'model_providers.wechat_http.supports_websockets=false',
+  ];
+}
+
+export function buildMcpIsolationArgs(): string[] {
+  return BRIDGE_DISABLED_MCP_SERVERS.flatMap((server) => [
+    '-c',
+    `mcp_servers.${server}.enabled=false`,
+  ]);
+}
+
+export function buildSpawnOptions(cwd: string) {
+  // `codex exec` keeps reading stdin for follow-up turns unless the pipe is closed.
+  const stdio: ['ignore', 'pipe', 'pipe'] = ['ignore', 'pipe', 'pipe'];
+  return {
+    cwd,
+    windowsHide: true,
+    stdio,
+  };
+}
+
+export function buildCommandArgs(
+  options: RunCodexSessionOptions,
+  imageFiles: string[] = [],
+): string[] {
   const executableArgs = options.threadId
     ? ['exec', 'resume', options.threadId, '--json', '--skip-git-repo-check']
     : ['exec', '--json', '--skip-git-repo-check'];
@@ -126,6 +177,8 @@ function buildCommandArgs(options: RunCodexSessionOptions, imageFiles: string[])
   }
 
   executableArgs.push(...buildExecutionModeArgs());
+  executableArgs.push(...buildMcpIsolationArgs());
+  executableArgs.push(...buildHttpProviderArgs());
   executableArgs.push('-c', `model_reasoning_effort="${options.reasoningEffort || 'medium'}"`);
 
   for (const imageFile of imageFiles) {
@@ -155,10 +208,7 @@ export async function runCodexSession(
 
   try {
     await new Promise<void>((resolve) => {
-      const child = spawn(executable, args, {
-        cwd: options.cwd,
-        windowsHide: true,
-      });
+      const child = spawn(executable, args, buildSpawnOptions(options.cwd));
 
       let settled = false;
       let stdoutBuffer = '';

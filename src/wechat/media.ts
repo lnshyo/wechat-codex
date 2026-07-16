@@ -3,6 +3,9 @@ import { MessageItemType } from './types.js';
 import { downloadAndDecrypt } from './cdn.js';
 import { logger } from '../logger.js';
 
+export const MISSING_VOICE_TRANSCRIPT_REPLY =
+  '微信没有为这条语音提供转写文本，请改用文字发送，或在微信生成转写后重试。';
+
 function detectMimeType(data: Buffer): string {
   if (data[0] === 0x89 && data[1] === 0x50) return 'image/png';
   if (data[0] === 0xFF && data[1] === 0xD8) return 'image/jpeg';
@@ -76,7 +79,22 @@ export async function downloadImage(item: MessageItem): Promise<string | null> {
  * Returns text_item.text or empty string.
  */
 export function extractText(item: MessageItem): string {
-  return item.text_item?.text ?? '';
+  if (item.text_item?.text) {
+    return item.text_item.text;
+  }
+
+  const currentVoiceText = item.voice_item?.text?.trim();
+  if (currentVoiceText) {
+    return currentVoiceText;
+  }
+
+  return item.voice_item?.voice_text?.trim() ?? '';
+}
+
+export function getMissingVoiceTranscriptReply(items: MessageItem[]): string | undefined {
+  const hasVoiceItem = items.some((item) => Boolean(item.voice_item));
+  const hasAnyText = items.some((item) => extractText(item).trim().length > 0);
+  return hasVoiceItem && !hasAnyText ? MISSING_VOICE_TRANSCRIPT_REPLY : undefined;
 }
 
 /**

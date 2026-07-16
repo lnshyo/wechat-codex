@@ -8,6 +8,7 @@ Use when touching `src/codex/**`, Codex CLI invocation, transcript parsing, loca
 - Do not reintroduce an `OPENAI_API_KEY` requirement for normal local operation when `codex.exe` is already logged in.
 - Keep default model behavior aligned with repository memory: `gpt-5.4` and medium reasoning unless the user asks otherwise.
 - WeChat-triggered Codex runs should retain full local access and no approval prompts in the bridge execution path.
+- Keep unrelated MCP isolation process-local to bridge-owned Codex children. Codex merges `mcp_servers={}` with global configuration, so use explicit `mcp_servers.<name>.enabled=false` overrides and never persist this bridge optimization into the user's global Codex/Desktop MCP settings.
 - Local companion sync must mirror only fresh final assistant replies after bind time, not historical transcript content or intermediate events.
 
 ## Verification

@@ -7,13 +7,31 @@ import type {
 } from './types.js';
 import { logger } from '../logger.js';
 
-/** Generate a random uint32 and return its base64 representation. */
+const ILINK_APP_ID = 'bot';
+const ILINK_APP_CLIENT_VERSION = 256; // 0.1.0 encoded as 0x00000100
+const CHANNEL_VERSION = '0.1.0';
+
+export function buildIlinkCommonHeaders(): Record<string, string> {
+  return {
+    'iLink-App-Id': ILINK_APP_ID,
+    'iLink-App-ClientVersion': String(ILINK_APP_CLIENT_VERSION),
+  };
+}
+
+function buildBaseInfo(): { channel_version: string; bot_agent: string } {
+  return {
+    channel_version: CHANNEL_VERSION,
+    bot_agent: 'wechat-codex',
+  };
+}
+
+/** Generate the decimal form of a random uint32 and return it as base64. */
 function generateUin(): string {
   const buf = new Uint8Array(4);
   crypto.getRandomValues(buf);
   const view = new DataView(buf.buffer);
   const uint32 = view.getUint32(0, false); // big-endian
-  return Buffer.from(buf).toString('base64');
+  return Buffer.from(String(uint32), 'utf8').toString('base64');
 }
 
 export class WeChatApi {
@@ -47,6 +65,7 @@ export class WeChatApi {
       'Authorization': `Bearer ${this.token}`,
       'AuthorizationType': 'ilink_bot_token',
       'X-WECHAT-UIN': this.uin,
+      ...buildIlinkCommonHeaders(),
     };
   }
 
@@ -66,7 +85,11 @@ export class WeChatApi {
       const res = await fetch(url, {
         method: 'POST',
         headers: this.headers(),
-        body: JSON.stringify(body),
+        body: JSON.stringify(
+          body && typeof body === 'object' && !Array.isArray(body)
+            ? { ...(body as Record<string, unknown>), base_info: buildBaseInfo() }
+            : body,
+        ),
         signal: controller.signal,
       });
 
@@ -92,7 +115,7 @@ export class WeChatApi {
   async getUpdates(buf?: string): Promise<GetUpdatesResp> {
     return this.request<GetUpdatesResp>(
       'ilink/bot/getupdates',
-      buf ? { get_updates_buf: buf } : {},
+      { get_updates_buf: buf ?? '' },
       35_000,
     );
   }

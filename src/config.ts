@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { CONFIG_PATH } from './constants.js';
 
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+export type CodexProvider = 'cli' | 'app-server';
 
 export interface Config {
   workingDirectory: string;
@@ -11,6 +12,8 @@ export interface Config {
   reasoningEffort?: ReasoningEffort;
   systemPrompt?: string;
   codexExecutablePath?: string;
+  codexProvider?: CodexProvider;
+  appServerFallbackToCli?: boolean;
   sessionTokenBudget?: number;
   sessionReplyReserveTokens?: number;
   maxQueuedTasksPerPeer?: number;
@@ -20,7 +23,19 @@ const DEFAULT_CONFIG: Config = {
   workingDirectory: process.cwd(),
   model: 'gpt-5.4',
   reasoningEffort: 'medium',
+  codexProvider: 'cli',
+  appServerFallbackToCli: true,
 };
+
+function parseBoolean(value: string): boolean | undefined {
+  if (value === 'true') {
+    return true;
+  }
+  if (value === 'false') {
+    return false;
+  }
+  return undefined;
+}
 
 function parseConfigFile(content: string): Config {
   const config: Config = { ...DEFAULT_CONFIG };
@@ -57,6 +72,18 @@ function parseConfigFile(content: string): Config {
       case 'codexExecutablePath':
         config.codexExecutablePath = value;
         break;
+      case 'codexProvider':
+        if (value === 'cli' || value === 'app-server') {
+          config.codexProvider = value;
+        }
+        break;
+      case 'appServerFallbackToCli': {
+        const parsed = parseBoolean(value);
+        if (parsed !== undefined) {
+          config.appServerFallbackToCli = parsed;
+        }
+        break;
+      }
       case 'sessionTokenBudget': {
         const parsed = Number(value);
         if (Number.isFinite(parsed) && parsed > 0) {
@@ -103,6 +130,10 @@ export function saveConfig(config: Config): void {
     config.reasoningEffort ? `reasoningEffort=${config.reasoningEffort}` : '',
     config.systemPrompt ? `systemPrompt=${config.systemPrompt}` : '',
     config.codexExecutablePath ? `codexExecutablePath=${config.codexExecutablePath}` : '',
+    config.codexProvider ? `codexProvider=${config.codexProvider}` : '',
+    config.appServerFallbackToCli !== undefined
+      ? `appServerFallbackToCli=${config.appServerFallbackToCli}`
+      : '',
     config.sessionTokenBudget ? `sessionTokenBudget=${config.sessionTokenBudget}` : '',
     config.sessionReplyReserveTokens !== undefined
       ? `sessionReplyReserveTokens=${config.sessionReplyReserveTokens}`

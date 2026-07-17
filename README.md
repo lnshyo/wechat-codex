@@ -143,9 +143,15 @@ For silent-mode troubleshooting, use `npm run service -- status` and `npm run lo
 sessionTokenBudget=120000
 sessionReplyReserveTokens=4096
 maxQueuedTasksPerPeer=5
+codexProvider=app-server
+appServerFallbackToCli=true
 ```
 
-These values control estimated remaining context budget and the per-contact queue limit.
+`codexProvider` defaults to `cli`, preserving the existing one-process-per-turn behavior. Set it to
+`app-server` to start and warm one persistent `codex.exe app-server` process when the bridge starts.
+If initialization fails and `appServerFallbackToCli=true`, that request uses the existing CLI provider
+instead. The three budget and queue values retain their existing behavior. Changing provider values
+requires a bridge restart.
 
 ## How It Works
 
@@ -159,6 +165,7 @@ These values control estimated remaining context budget and the per-contact queu
 - WeChat-triggered Codex sessions run with full local access and no approval prompts
 - Bridge-owned Codex sessions force the authenticated Responses HTTPS provider and disable WebSocket transport
 - Bridge-owned Codex children disable unrelated global MCP servers through process-only overrides to reduce startup latency; Codex Desktop and global MCP settings are unchanged
+- App Server mode keeps one bridge-owned Codex process warm, reuses loaded threads, and shuts it down with the bridge; it does not attach to or require Codex Desktop's private App Server
 - Fresh Codex threads preload one capped startup-memory snapshot in repository order; resumed threads do not repeat the bootstrap
 
 ## Development

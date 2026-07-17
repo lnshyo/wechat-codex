@@ -15,11 +15,15 @@ import {
   readTranscriptEventsSince,
 } from './codex/companion.js';
 import {
-  runCodexSession,
   resolveCodexExecutablePath,
   type CodexSessionEvent,
-  type RunCodexSessionOptions,
 } from './codex/provider.js';
+import {
+  runConfiguredCodexSession,
+  shutdownCodexRuntime,
+  warmCodexRuntime,
+  type RunConfiguredCodexSessionOptions,
+} from './codex/runtime.js';
 import { handleGatewayCommand } from './gateway/commands.js';
 import { createGatewayRuntime } from './gateway/runtime.js';
 import {
@@ -251,9 +255,11 @@ async function executeCodexRun(
   accountId: string,
   peerUserId: string,
   sessionStore: ReturnType<typeof createSessionStore>,
-  options: RunCodexSessionOptions,
+  options: RunConfiguredCodexSessionOptions,
 ): Promise<CodexRunResult> {
-  const runOnce = async (runOptions: RunCodexSessionOptions): Promise<CodexRunResult> => {
+  const runOnce = async (
+    runOptions: RunConfiguredCodexSessionOptions,
+  ): Promise<CodexRunResult> => {
     let result: CodexRunResult = {
       aborted: false,
       text: '',
@@ -301,7 +307,7 @@ async function executeCodexRun(
       }
     };
 
-    await runCodexSession(runOptions, handleEvent);
+    await runConfiguredCodexSession(runOptions, handleEvent);
     return result;
   };
 
@@ -373,6 +379,8 @@ async function runGatewayTask(
       systemPrompt,
       images: task.imagePayloads.length > 0 ? task.imagePayloads : undefined,
       abortController,
+      provider: config.codexProvider,
+      appServerFallbackToCli: config.appServerFallbackToCli,
     });
 
     await stopProgress(accountId, peerUserId, request, sender, sessionStore);
@@ -586,6 +594,12 @@ async function runDaemon(): Promise<void> {
     process.exit(1);
   }
 
+  const startupConfig = loadConfig();
+  await warmCodexRuntime(
+    startupConfig.codexProvider,
+    startupConfig.appServerFallbackToCli,
+  );
+
   const api = new WeChatApi(account.botToken, account.baseUrl);
   const sender = createSender(api, account.accountId);
   const sessionStore = createSessionStore();
@@ -653,11 +667,12 @@ async function runDaemon(): Promise<void> {
     },
   };
 
-  const monitor = createMonitor(api, callbacks);
+  const monitor = createMonitor(api, account.accountId, callbacks);
 
   function shutdown(): void {
     logger.info('Shutting down bridge daemon');
     gatewayRuntime.abortAll();
+    shutdownCodexRuntime();
     localTranscriptMirror.stop();
     monitor.stop();
     releaseDaemonLock(DAEMON_LOCK_PATH, process.pid);
@@ -732,6 +747,7 @@ if (command === 'setup') {
   });
 } else {
   runDaemon().catch((error) => {
+    shutdownCodexRuntime();
     logger.error('Daemon failed', {
       error: error instanceof Error ? error.message : String(error),
     });

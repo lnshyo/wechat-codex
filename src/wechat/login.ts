@@ -1,5 +1,6 @@
 import type { AccountData } from './accounts.js';
 import { DEFAULT_BASE_URL, saveAccount } from './accounts.js';
+import { buildIlinkCommonHeaders } from './api.js';
 import { logger } from '../logger.js';
 
 const QR_CODE_URL = `${DEFAULT_BASE_URL}/ilink/bot/get_bot_qrcode?bot_type=3`;
@@ -29,7 +30,7 @@ function sleep(ms: number): Promise<void> {
 export async function startQrLogin(): Promise<{ qrcodeUrl: string; qrcodeId: string }> {
   logger.info('Requesting QR code');
 
-  const response = await fetch(QR_CODE_URL);
+  const response = await fetch(QR_CODE_URL, { headers: buildIlinkCommonHeaders() });
   if (!response.ok) {
     throw new Error(`Failed to get QR code: HTTP ${response.status}`);
   }
@@ -60,7 +61,10 @@ export async function waitForQrScan(qrcodeId: string): Promise<AccountData> {
     let response: Response;
 
     try {
-      response = await fetch(url, { signal: controller.signal });
+      response = await fetch(url, {
+        headers: buildIlinkCommonHeaders(),
+        signal: controller.signal,
+      });
     } catch (error: any) {
       clearTimeout(timer);
       if (error.name === 'AbortError' || error.code === 'ETIMEDOUT') {

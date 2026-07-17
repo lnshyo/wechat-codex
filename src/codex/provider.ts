@@ -1,5 +1,5 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -14,6 +14,7 @@ export interface RunCodexSessionOptions {
   reasoningEffort?: ReasoningEffort;
   systemPrompt?: string;
   images?: string[];
+  ephemeral?: boolean;
   abortController?: AbortController;
 }
 
@@ -129,6 +130,8 @@ export function buildExecutionModeArgs(): string[] {
 export function buildHttpProviderArgs(): string[] {
   return [
     '-c',
+    'service_tier="fast"',
+    '-c',
     'model_provider="wechat_http"',
     '-c',
     'model_providers.wechat_http.name="OpenAI HTTPS"',
@@ -143,11 +146,26 @@ export function buildHttpProviderArgs(): string[] {
   ];
 }
 
-export function buildMcpIsolationArgs(): string[] {
-  return BRIDGE_DISABLED_MCP_SERVERS.flatMap((server) => [
+export function buildMcpIsolationArgs(configuredServers: readonly string[]): string[] {
+  const configured = new Set(configuredServers);
+  return BRIDGE_DISABLED_MCP_SERVERS.filter((server) => configured.has(server)).flatMap((server) => [
     '-c',
     `mcp_servers.${server}.enabled=false`,
   ]);
+}
+
+export function loadConfiguredMcpServers(): string[] {
+  const codexHome = process.env.CODEX_HOME || join(homedir(), '.codex');
+  const configPath = join(codexHome, 'config.toml');
+
+  try {
+    const config = readFileSync(configPath, 'utf8');
+    return [...config.matchAll(/^\s*\[mcp_servers\.([A-Za-z0-9_-]+)\]\s*$/gm)].map(
+      (match) => match[1],
+    );
+  } catch {
+    return [];
+  }
 }
 
 export function buildSpawnOptions(cwd: string) {
@@ -163,6 +181,7 @@ export function buildSpawnOptions(cwd: string) {
 export function buildCommandArgs(
   options: RunCodexSessionOptions,
   imageFiles: string[] = [],
+  configuredMcpServers: readonly string[] = [],
 ): string[] {
   const executableArgs = options.threadId
     ? ['exec', 'resume', options.threadId, '--json', '--skip-git-repo-check']
@@ -177,7 +196,7 @@ export function buildCommandArgs(
   }
 
   executableArgs.push(...buildExecutionModeArgs());
-  executableArgs.push(...buildMcpIsolationArgs());
+  executableArgs.push(...buildMcpIsolationArgs(configuredMcpServers));
   executableArgs.push(...buildHttpProviderArgs());
   executableArgs.push('-c', `model_reasoning_effort="${options.reasoningEffort || 'medium'}"`);
 
@@ -195,7 +214,7 @@ export async function runCodexSession(
 ): Promise<void> {
   const executable = resolveCodexExecutable();
   const tempImages = createTempImageFiles(options.images);
-  const args = buildCommandArgs(options, tempImages.files);
+  const args = buildCommandArgs(options, tempImages.files, loadConfiguredMcpServers());
   const startedAt = Date.now();
 
   logger.info('Starting local Codex CLI session', {

@@ -140,7 +140,13 @@ npm run logs
 sessionTokenBudget=120000
 sessionReplyReserveTokens=4096
 maxQueuedTasksPerPeer=5
+codexProvider=app-server
+appServerFallbackToCli=true
 ```
+
+`codexProvider` 默认是 `cli`，继续保持每轮启动一次进程的旧行为。设置为 `app-server`
+后，bridge 会在启动时预热并持续复用一个独立的 `codex.exe app-server`。如果初始化失败且
+`appServerFallbackToCli=true`，该次请求会自动回退到原有 CLI provider。修改后需要重启 bridge。
 
 这些值会影响剩余上下文预算估算和单联系人队列上限。
 
@@ -156,6 +162,7 @@ maxQueuedTasksPerPeer=5
 - 微信侧触发的 Codex 会话以完全本地访问模式运行，不需要审批
 - bridge 自己发起的 Codex 会话固定使用已登录身份的 Responses HTTPS provider，并禁用 WebSocket
 - bridge 启动的 Codex 子进程会通过仅对本进程生效的覆盖项禁用无关全局 MCP，以降低启动延迟；Codex Desktop 和全局 MCP 配置不受影响
+- App Server 模式会持续复用 bridge 自己的 Codex 进程，并随 bridge 一起关闭；它不会连接或依赖 Codex Desktop 私有的 App Server
 - 新线程会按仓库顺序一次性预载带大小上限的启动记忆快照；恢复旧线程时不会重复注入
 
 ## 开发

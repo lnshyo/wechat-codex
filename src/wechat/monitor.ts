@@ -93,7 +93,7 @@ export function createPersistentMessageDeduper(options: PersistentMessageDeduper
   };
 }
 
-export function createMonitor(api: WeChatApi, callbacks: MonitorCallbacks) {
+export function createMonitor(api: WeChatApi, accountId: string, callbacks: MonitorCallbacks) {
   const controller = new AbortController();
   const messageDeduper = createPersistentMessageDeduper();
 
@@ -102,12 +102,21 @@ export function createMonitor(api: WeChatApi, callbacks: MonitorCallbacks) {
 
     while (!controller.signal.aborted) {
       try {
-        const buf = loadSyncBuf();
+        const buf = loadSyncBuf(accountId);
         logger.debug('Polling for messages', { hasBuf: buf.length > 0 });
 
         const resp = await api.getUpdates(buf || undefined);
+        const responseCode = resp.errcode ?? resp.ret;
+        const responseMessage = resp.errmsg ?? resp.retmsg;
 
-        if (resp.ret === SESSION_EXPIRED_ERRCODE) {
+        if (responseCode === SESSION_EXPIRED_ERRCODE && buf) {
+          logger.warn('Stored sync buffer expired; clearing it and retrying', { accountId });
+          saveSyncBuf(accountId, '');
+          consecutiveFailures = 0;
+          continue;
+        }
+
+        if (responseCode === SESSION_EXPIRED_ERRCODE) {
           logger.warn('Session expired, pausing for 1 hour');
           callbacks.onSessionExpired();
           await sleep(SESSION_EXPIRED_PAUSE_MS, controller.signal);
@@ -115,13 +124,16 @@ export function createMonitor(api: WeChatApi, callbacks: MonitorCallbacks) {
           continue;
         }
 
-        if (resp.ret !== undefined && resp.ret !== 0) {
-          logger.warn('getUpdates returned error', { ret: resp.ret, retmsg: resp.retmsg });
+        if (responseCode !== undefined && responseCode !== 0) {
+          logger.warn('getUpdates returned error', {
+            responseCode,
+            responseMessage,
+          });
         }
 
         // Save the new sync buffer regardless of ret
         if (resp.get_updates_buf) {
-          saveSyncBuf(resp.get_updates_buf);
+          saveSyncBuf(accountId, resp.get_updates_buf);
         }
 
         // Process messages (with deduplication)

@@ -3,6 +3,7 @@ dist/
 reference_repo/
 *.log
 downloads/
+/资料库/
 _reference_wechat_claude_code/
 .codex-temp/
 .tmp/

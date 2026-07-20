@@ -96,11 +96,13 @@ Read `rules/index.md` first, then load only the rule files that match the touche
 - `src/service.ts`, `scripts/*.ps1`, Windows startup/runtime changes: `rules/windows-service.md`
 - tests, build, or verification changes: `rules/testing.md`
 - README, docs, memory, config, commands, paths, ports, or operator entrypoints: `rules/docs-memory-sync.md`
+- downloaded, received, generated, archived, or WeChat-transferred files: `rules/file-storage.md`
 - reusable workflow, skill extraction, or cross-repository standardization: `rules/skill-evolution.md`
 
 ## Working Rules
 
 - Keep README files aligned with the real runtime behavior
+- Treat the system Downloads folder as temporary intake; classify repository work and WeChat-transferred files according to `rules/file-storage.md` before choosing a durable location
 - Prefer minimal local state; Codex thread state should remain per contact
 - Keep root and project memory files in sync with meaningful behavior changes rather than letting them drift
 - Follow the session-opening behavior defined by `soul.md` so fresh sessions begin with a short greeting and self-introduction

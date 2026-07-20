@@ -48,11 +48,13 @@ import { loadLatestAccount, type AccountData } from './wechat/accounts.js';
 import { WeChatApi } from './wechat/api.js';
 import { startQrLogin, waitForQrScan } from './wechat/login.js';
 import {
-  downloadImage,
-  extractFirstImageUrl,
   extractText,
   getMissingVoiceTranscriptReply,
 } from './wechat/media.js';
+import {
+  archiveWeChatAttachments,
+  type ArchivedWeChatAttachment,
+} from './wechat/library.js';
 import { createMonitor, type MonitorCallbacks } from './wechat/monitor.js';
 import { createSender, type ProgressState } from './wechat/send.js';
 import { MessageType, type WeixinMessage } from './wechat/types.js';
@@ -172,6 +174,46 @@ async function runSetup(): Promise<void> {
 
 function extractTextFromItems(items: NonNullable<WeixinMessage['item_list']>): string {
   return items.map((item) => extractText(item)).filter(Boolean).join('\n');
+}
+
+function buildAttachmentPrompt(
+  userText: string,
+  attachments: ArchivedWeChatAttachment[],
+  failureCount: number,
+): string {
+  const hasImage = attachments.some((attachment) => attachment.kind === 'image');
+  const hasVideo = attachments.some((attachment) => attachment.kind === 'video');
+  const fallback = hasVideo
+    ? '请读取并总结收到的视频附件。'
+    : attachments.length > 0
+      ? '请读取并处理收到的微信附件。'
+      : buildPrompt(userText, hasImage);
+  const base = userText.trim() || fallback;
+  const archived = attachments.length > 0
+    ? [
+        '微信附件已自动保存到本地资料库：',
+        ...attachments.map((attachment) => `- ${attachment.path}`),
+      ].join('\n')
+    : '';
+  const failed = failureCount > 0
+    ? `另有 ${failureCount} 个附件未能下载或保存，请在回复中明确告知用户。`
+    : '';
+
+  return [base, archived, failed].filter(Boolean).join('\n\n');
+}
+
+function buildAttachmentPreview(
+  userText: string,
+  attachments: ArchivedWeChatAttachment[],
+): string {
+  const hasImage = attachments.some((attachment) => attachment.kind === 'image');
+  if (userText.trim() || hasImage) {
+    return buildTaskPreview(userText, hasImage);
+  }
+  if (attachments.some((attachment) => attachment.kind === 'video')) {
+    return '[Video attachment]';
+  }
+  return attachments.length > 0 ? '[File attachment]' : buildTaskPreview(userText, false);
 }
 
 async function stopProgress(
@@ -438,10 +480,18 @@ async function handleMessage(
   const fromUserId = message.from_user_id;
   const contextToken = message.context_token ?? '';
   const userText = extractTextFromItems(message.item_list);
-  const imageItem = extractFirstImageUrl(message.item_list);
   const missingVoiceTranscriptReply = getMissingVoiceTranscriptReply(message.item_list);
+  const config = loadConfig();
+  const archived = await archiveWeChatAttachments(message.item_list, {
+    workingDirectory: config.workingDirectory,
+    messageId: message.message_id,
+    now: message.create_time_ms ? new Date(message.create_time_ms) : undefined,
+  });
+  const imagePayloads = archived.files
+    .map((attachment) => attachment.dataUri)
+    .filter((payload): payload is string => Boolean(payload));
 
-  if (!userText.trim() && !imageItem) {
+  if (!userText.trim() && archived.files.length === 0) {
     if (missingVoiceTranscriptReply) {
       logger.warn('Inbound voice message has no WeChat transcription', {
         itemCount: message.item_list.length,
@@ -456,6 +506,15 @@ async function handleMessage(
       return;
     }
 
+    if (archived.failures.length > 0) {
+      await sender.sendText(
+        fromUserId,
+        contextToken,
+        '附件下载或保存失败，请稍后重试。',
+      );
+      return;
+    }
+
     await sender.sendText(fromUserId, contextToken, '\u6682\u4e0d\u652f\u6301\u8fd9\u79cd\u6d88\u606f\u7c7b\u578b\u3002');
     return;
   }
@@ -466,7 +525,7 @@ async function handleMessage(
     contextToken,
     sender,
     runtime: gatewayRuntime,
-    hasImage: Boolean(imageItem),
+    hasImage: imagePayloads.length > 0,
   });
 
   if (command) {
@@ -478,29 +537,11 @@ async function handleMessage(
     return;
   }
 
-  let imagePayloads: string[] = [];
-  if (imageItem) {
-    try {
-      const imagePayload = await downloadImage(imageItem);
-      if (!imagePayload) {
-        await sender.sendText(fromUserId, contextToken, '\u56fe\u7247\u4e0b\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002');
-        return;
-      }
-
-      imagePayloads = [imagePayload];
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : String(error);
-      logger.error('Failed to download inbound image', { fromUserId, error: messageText });
-      await sender.sendText(fromUserId, contextToken, '\u56fe\u7247\u4e0b\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002');
-      return;
-    }
-  }
-
   await gatewayRuntime.enqueueMessage({
     peerUserId: fromUserId,
     contextToken,
-    promptText: buildPrompt(userText, imagePayloads.length > 0),
-    preview: buildTaskPreview(userText, imagePayloads.length > 0),
+    promptText: buildAttachmentPrompt(userText, archived.files, archived.failures.length),
+    preview: buildAttachmentPreview(userText, archived.files),
     imagePayloads,
     hasImage: imagePayloads.length > 0,
   });

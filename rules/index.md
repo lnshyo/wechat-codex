@@ -9,6 +9,7 @@ Read this file after the startup memory files. Load only the rule files that mat
 - `rules/windows-service.md`: background daemon, Windows service, Scheduled Task, PowerShell scripts, lock files, pid files, startup, logs, or recovery operations.
 - `rules/testing.md`: tests, build commands, verification scope, CI, coverage expectations, or test fixtures.
 - `rules/docs-memory-sync.md`: README files, docs, commands, paths, env vars, ports, operator entrypoints, memory files, or project status.
+- `rules/file-storage.md`: downloaded, received, generated, moved, archived, or WeChat-transferred files and their approved storage locations.
 - `rules/skill-evolution.md`: reusable skills, cross-repository workflow extraction, learning promotion, or standardization across repositories.
 
 ## Loading Rule

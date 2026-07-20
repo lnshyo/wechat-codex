@@ -1,7 +1,13 @@
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 import { auditMemoryMarkdownFiles } from '../dist/memory-encoding.js';
+import {
+  DEFAULT_MAX_MEMORY_FILE_CHARS,
+  DEFAULT_MAX_MEMORY_TOTAL_CHARS,
+  getStartupMemoryPaths,
+} from '../dist/gateway/task-utils.js';
 
 function pad(value, width) {
   return String(value).padEnd(width, ' ');
@@ -38,12 +44,43 @@ console.log(`Files with BOM: ${report.summary.filesWithBom}`);
 console.log(`Files with NUL bytes: ${report.summary.filesWithNullBytes}`);
 console.log(`Invalid UTF-8 files: ${report.summary.invalidUtf8Files}`);
 
+const oversizedStartupFiles = [];
+let startupTotalChars = 0;
+for (const file of getStartupMemoryPaths(root, new Date())) {
+  if (!existsSync(file.path)) {
+    continue;
+  }
+  const chars = readFileSync(file.path, 'utf8').length;
+  startupTotalChars += chars;
+  if (chars > DEFAULT_MAX_MEMORY_FILE_CHARS) {
+    oversizedStartupFiles.push({ label: file.label, chars });
+  }
+}
+
+console.log('');
+console.log(
+  `Startup preload budget: ${startupTotalChars}/${DEFAULT_MAX_MEMORY_TOTAL_CHARS} total chars, per-file limit ${DEFAULT_MAX_MEMORY_FILE_CHARS}`,
+);
+for (const file of oversizedStartupFiles) {
+  console.error(
+    `Preload budget exceeded: ${file.label} has ${file.chars} chars and will be truncated in fresh-session bootstraps.`,
+  );
+}
+const startupTotalExceeded = startupTotalChars > DEFAULT_MAX_MEMORY_TOTAL_CHARS;
+if (startupTotalExceeded) {
+  console.error(
+    `Preload budget exceeded: startup files total ${startupTotalChars} chars; later files will be truncated or dropped.`,
+  );
+}
+
 const hasAnomaly =
   report.summary.utf8BomFiles > 0 ||
   report.summary.utf16Files > 0 ||
   report.summary.nonUtf8Files > 0 ||
   report.summary.filesWithNullBytes > 0 ||
-  report.summary.invalidUtf8Files > 0;
+  report.summary.invalidUtf8Files > 0 ||
+  oversizedStartupFiles.length > 0 ||
+  startupTotalExceeded;
 
 if (hasAnomaly) {
   console.error('');

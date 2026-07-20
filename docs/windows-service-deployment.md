@@ -70,9 +70,9 @@ npm run service -- status
 
 如果安装成功，预期应看到 `windows-service` 模式，并且状态为 `running`。
 
-## 本机验证通过的实际结构
+## 验证通过的目录结构示例
 
-这台机器最终落地后的服务定义如下：
+以下示例使用 `YOUR_USERNAME` 和 `C:\path\to\wechat-codex` 占位，部署时替换为当前机器的实际路径：
 
 - Service wrapper 目录：`C:\Users\YOUR_USERNAME\.wechat-codex\windows-service`
 - Wrapper 可执行文件：`C:\Users\YOUR_USERNAME\.wechat-codex\windows-service\wechat-codex-service.exe`
@@ -245,7 +245,7 @@ schtasks /Delete /TN wechat-codex-logon /F
 按这个顺序最省时间：
 
 1. `codex login status`
-2. 检查 `[config.env](C:\Users\YOUR_USERNAME\.wechat-codex\config.env)` 里的 `codexExecutablePath`
+2. 检查 `C:\Users\YOUR_USERNAME\.wechat-codex\config.env` 里的 `codexExecutablePath`
 3. `npm run service -- status`
 4. `sc.exe queryex wechat-codex`
 5. `npm run logs`
@@ -314,7 +314,7 @@ Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' } | Select
 - 重启电脑后无需登录脚本，服务自动拉起
 - 微信发送 `/new` 和普通消息都能正常得到单次回复
 
-## 本机已验证通过的版本
+## 已验证通过的配置基线
 
 - 仓库路径：`C:\path\to\wechat-codex`
 - 数据目录：`C:\Users\YOUR_USERNAME\.wechat-codex`

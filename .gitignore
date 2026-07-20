@@ -2,6 +2,27 @@ node_modules/
 dist/
 reference_repo/
 *.log
+
+# Local environment and credential files
+.env
+.env.*
+!.env.example
+!*.env.example
+config.env
+config.env.*
+!config.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+service-account*.json
+cookies*.json
+.credentials/
+.secrets/
+
 downloads/
 /资料库/
 _reference_wechat_claude_code/

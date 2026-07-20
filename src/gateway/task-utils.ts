@@ -3,8 +3,8 @@ import { join } from 'node:path';
 
 const MAX_MESSAGE_LENGTH = 2048;
 const FRESH_SESSION_MEMORY_BOOTSTRAP_MARKER = '[wechat-codex:fresh-session-memory-bootstrap]';
-const DEFAULT_MAX_MEMORY_FILE_CHARS = 12_000;
-const DEFAULT_MAX_MEMORY_TOTAL_CHARS = 48_000;
+export const DEFAULT_MAX_MEMORY_FILE_CHARS = 24_000;
+export const DEFAULT_MAX_MEMORY_TOTAL_CHARS = 64_000;
 
 export interface FreshSessionMemoryOptions {
   now?: Date;
@@ -19,7 +19,7 @@ function formatLocalDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function getStartupMemoryPaths(cwd: string, now: Date): Array<{ label: string; path: string }> {
+export function getStartupMemoryPaths(cwd: string, now: Date): Array<{ label: string; path: string }> {
   const today = formatLocalDate(now);
   const yesterdayDate = new Date(now);
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
@@ -42,11 +42,6 @@ function getStartupMemoryPaths(cwd: string, now: Date): Array<{ label: string; p
     dailyLabel,
     'MEMORY.md',
     'memory/CONTEXT.md',
-    'memory/assistant/INDEX.md',
-    'memory/assistant/GOALS.md',
-    'memory/assistant/TASKS.md',
-    'memory/assistant/SCHEDULE.md',
-    'memory/assistant/PREFERENCES.md',
   ].map((label) => ({ label, path: join(cwd, ...label.split('/')) }));
 }
 

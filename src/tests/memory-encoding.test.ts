@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -108,8 +108,13 @@ test('auditMemoryMarkdownFiles reports file-level details and summary counts', (
   }
 });
 
-test('memory/2026-04-08.md is normalized to UTF-8 without a BOM marker', () => {
+test('memory/2026-04-08.md is normalized to UTF-8 without a BOM marker', (t) => {
   const file = path.join(process.cwd(), 'memory', '2026-04-08.md');
+  // The memory layer is untracked; it exists only in the main checkout, not in CI or linked worktrees.
+  if (!existsSync(file)) {
+    t.skip('memory layer not present in this checkout');
+    return;
+  }
   const bytes = readFileSync(file);
   assert.notDeepEqual(Array.from(bytes.slice(0, 3)), [0xef, 0xbb, 0xbf]);
   assert.deepEqual(detectBufferEncoding(bytes), {

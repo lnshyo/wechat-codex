@@ -10,6 +10,7 @@ Use when touching `src/codex/**`, Codex CLI invocation, transcript parsing, loca
 - WeChat-triggered Codex runs should retain full local access and no approval prompts in the bridge execution path.
 - Keep unrelated MCP isolation process-local to bridge-owned Codex children. Codex merges `mcp_servers={}` with global configuration, so use explicit `mcp_servers.<name>.enabled=false` overrides and never persist this bridge optimization into the user's global Codex/Desktop MCP settings.
 - Local companion sync must mirror only fresh final assistant replies after bind time, not historical transcript content or intermediate events.
+- Single-turn `codex.exe` CLI invocations must spawn the child with stdin closed or ignored. `codex exec --json` can finish a turn and then block on `Reading additional input from stdin...`; an open stdin pipe leaves the child alive and stalls the task queue behind the first request. This applies to the CLI fallback path even while the app-server provider is primary.
 
 ## Verification
 

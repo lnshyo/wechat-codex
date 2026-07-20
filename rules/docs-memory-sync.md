@@ -26,6 +26,9 @@ Use this matrix before replying, switching tasks, or ending a substantial sessio
 | Stable project fact, lasting decision, long-lived rule, or durable preference changes | Update `MEMORY.md` |
 | Stable path-specific rule emerges for a system area | Update the matching `rules/*.md` |
 | Operator-facing setup, commands, behavior, recovery, env vars, ports, or paths change | Update README/docs and `memory/CONTEXT.md` |
+| Detailed implementation or debugging narrative worth keeping but too long for the daily log headline | Append `memory/MEMORY.md` |
+| Repositories or project folders added, removed, or materially changed | Update `memory/workspace-structure.md` |
+| Publishing or release flow changes | Update `memory/publish-checklist.md` |
 | Workflow proves reusable across repositories | Promote to a reusable skill after capturing the local lesson |
 
 ## Closed-Loop Guardrails
@@ -38,16 +41,21 @@ Use this matrix before replying, switching tasks, or ending a substantial sessio
 - Never use chat history as the only storage for a decision that future sessions must know.
 - If terminal output or `Get-Content` looks garbled, first check whether the file bytes are valid UTF-8 before rewriting the file.
 - Do not bulk-rewrite memory-layer files just because the terminal display is wrong; confirm whether the issue is display decoding, not file corruption.
+- In a linked git worktree, the memory-layer files exist only in the main checkout; follow the Git Worktree Sessions section of `AGENTS.md` and never treat their absence as permission to skip the write matrix.
+- When opening `memory/learning-inbox.md`, adjudicate every candidate older than 30 days: promote, archive with a reason, or reject. Move promoted or archived entries out of the active Candidates section so the inbox only holds live items.
+- Run `npm run audit:memory-encoding` before finishing any change that touched memory-layer Markdown.
 
 ## Encoding Audit Workflow
 
 - Use `npm run audit:memory-encoding` to scan only the repository memory layer.
 - The audit must report file path, detected encoding, BOM presence, NUL-byte presence, UTF-8 validity, and overall counts.
 - Treat any `UTF-8 BOM`, `UTF-16`, `Non-UTF8/legacy`, NUL-byte, or invalid UTF-8 result as an anomaly that needs targeted correction.
+- The audit also checks the fresh-session preload budget: any startup-read file larger than the per-file snapshot limit (or a total over the snapshot budget) is an anomaly — consolidate that file instead of letting bootstraps silently truncate it.
 
 ## Promotion Rules
 
 - Daily log: chronological facts and work history.
+- `memory/MEMORY.md`: detailed project-local implementation and debugging trail.
 - `memory/learning-inbox.md`: candidate lessons that may be reused.
 - `rules/`: durable path-specific operating rules.
 - `MEMORY.md`: durable facts, project decisions, and long-lived rules.

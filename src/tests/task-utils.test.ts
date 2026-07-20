@@ -7,6 +7,7 @@ import test from 'node:test';
 import {
   buildFreshSessionSystemPrompt,
   buildSessionSystemPrompt,
+  getStartupMemoryPaths,
   loadFreshSessionMemorySnapshot,
 } from '../gateway/task-utils.js';
 
@@ -51,6 +52,21 @@ test('buildSessionSystemPrompt preloads memory only for fresh sessions', () => {
   assert.equal(resumed, 'base');
   assert.match(fresh ?? '', /fresh-only/);
   assert.match(fresh ?? '', /\[wechat-codex:fresh-session-memory-bootstrap\]/);
+  rmSync(cwd, { recursive: true, force: true });
+});
+
+test('getStartupMemoryPaths lists only documented memory-layer files in repository order', () => {
+  const cwd = createMemoryWorkspace();
+  const labels = getStartupMemoryPaths(cwd, new Date(2026, 6, 16, 12)).map((file) => file.label);
+
+  assert.deepEqual(labels, [
+    'USER.md',
+    'soul.md',
+    'SESSION-STATE.md',
+    'memory/2026-07-15.md',
+    'MEMORY.md',
+    'memory/CONTEXT.md',
+  ]);
   rmSync(cwd, { recursive: true, force: true });
 });
 

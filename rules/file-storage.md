@@ -7,6 +7,7 @@ Use when creating, downloading, receiving, generating, moving, archiving, or doc
 - This is a prospective placement rule for new files and newly completed work.
 - Do not treat this policy as authorization to reorganize the existing `downloads/` tree.
 - Existing files stay where they are unless the user separately asks for a migration or cleanup task.
+- Do not monitor or automatically reorganize the repository `downloads/` directory. Treat it as a manual intake area and process it only after the user explicitly asks Codex to organize the files placed there.
 - Creating the folder structure and routing future files into it is part of the rule; bulk-moving historical files is a different task and requires explicit scope.
 
 ## Storage Zones
@@ -118,7 +119,7 @@ Video work uses filenames, not per-topic subdirectories:
 
 Apply this workflow when a new file arrives or a new output is created:
 
-1. Land browser and manual downloads in `Downloads\00-Inbox`; archive supported WeChat attachments directly into the matching root-level `资料库/` category.
+1. Land browser and manual downloads in an intake location. Files placed in repository `downloads/` remain there until the user explicitly asks Codex to organize them; supported WeChat attachments continue to archive directly into the matching root-level `资料库/` category.
 2. Inspect ownership, topic, sensitivity, and expected lifetime before moving the file.
 3. Move reusable personal material into root-level `资料库/`; move software-project source and docs into their repository-native locations.
 4. Put printable-only documents in `10-待打印/`, reusable references in `20-知识文档/`, source videos and evidence in `30-视频资料/`, and completed summaries in `40-整理总结/`.

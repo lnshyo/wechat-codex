@@ -12,24 +12,9 @@ Use when touching README files, docs, memory files, commands, paths, config keys
 - Treat the memory-layer Markdown set as an explicitly encoded corpus: `AGENTS.md`, `USER.md`, `soul.md`, root `SESSION-STATE.md` / `MEMORY.md`, `memory/*.md`, and `rules/*.md` must stay in `UTF-8` without BOM.
 - When reading or writing memory-layer Markdown from scripts or shell commands, use tools or APIs that explicitly specify UTF-8 instead of relying on host-default encoding behavior.
 
-## Markdown Write Matrix
+## Canonical Write Matrix
 
-Use this matrix before replying, switching tasks, or ending a substantial session.
-
-| Event | Required write |
-| --- | --- |
-| User correction, explicit decision, changed goal, changed next step, blocker appears/clears | Rewrite `SESSION-STATE.md` |
-| Meaningful task starts | Append `memory/YYYY-MM-DD.md` |
-| Major investigation, implementation milestone, validation, failure, recovery, or handoff | Append `memory/YYYY-MM-DD.md` |
-| New insight may become a rule but is not yet proven durable | Add to `memory/learning-inbox.md` |
-| Commands, important paths, runtime locations, configs, known risks, project status, rule/agent structure, or near-term direction change | Update `memory/CONTEXT.md` |
-| Stable project fact, lasting decision, long-lived rule, or durable preference changes | Update `MEMORY.md` |
-| Stable path-specific rule emerges for a system area | Update the matching `rules/*.md` |
-| Operator-facing setup, commands, behavior, recovery, env vars, ports, or paths change | Update README/docs and `memory/CONTEXT.md` |
-| Detailed implementation or debugging narrative worth keeping but too long for the daily log headline | Append `memory/MEMORY.md` |
-| Repositories or project folders added, removed, or materially changed | Update `memory/workspace-structure.md` |
-| Publishing or release flow changes | Update `memory/publish-checklist.md` |
-| Workflow proves reusable across repositories | Promote to a reusable skill after capturing the local lesson |
+`AGENTS.md` is the single canonical home for the Markdown write order, file-specific triggers, and session lifecycle. This rule file adds documentation-specific sync checks and operational guardrails; do not copy the full matrix here, because two independently maintained matrices will drift.
 
 ## Closed-Loop Guardrails
 
@@ -50,7 +35,7 @@ Use this matrix before replying, switching tasks, or ending a substantial sessio
 - Use `npm run audit:memory-encoding` to scan only the repository memory layer.
 - The audit must report file path, detected encoding, BOM presence, NUL-byte presence, UTF-8 validity, and overall counts.
 - Treat any `UTF-8 BOM`, `UTF-16`, `Non-UTF8/legacy`, NUL-byte, or invalid UTF-8 result as an anomaly that needs targeted correction.
-- The audit also checks the fresh-session preload budget: any startup-read file larger than the per-file snapshot limit (or a total over the snapshot budget) is an anomaly — consolidate that file instead of letting bootstraps silently truncate it.
+- The audit also checks the fresh-session preload budget: usage at or above 80% produces an early warning, while any startup-read file larger than the per-file limit (or a total over the snapshot budget) is an anomaly. Consolidate before bootstraps silently truncate content.
 
 ## Promotion Rules
 

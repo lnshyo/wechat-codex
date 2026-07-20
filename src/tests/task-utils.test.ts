@@ -9,6 +9,7 @@ import {
   buildSessionSystemPrompt,
   getStartupMemoryPaths,
   loadFreshSessionMemorySnapshot,
+  resolveMemoryRoot,
 } from '../gateway/task-utils.js';
 
 function createMemoryWorkspace(): string {
@@ -68,6 +69,20 @@ test('getStartupMemoryPaths lists only documented memory-layer files in reposito
     'memory/CONTEXT.md',
   ]);
   rmSync(cwd, { recursive: true, force: true });
+});
+
+test('resolveMemoryRoot follows a linked-worktree git file to the main checkout', () => {
+  const mainRoot = createMemoryWorkspace();
+  const worktreeRoot = join(mainRoot, '.claude', 'worktrees', 'example');
+  const worktreeGitDir = join(mainRoot, '.git', 'worktrees', 'example');
+  mkdirSync(worktreeRoot, { recursive: true });
+  mkdirSync(worktreeGitDir, { recursive: true });
+  writeFileSync(join(worktreeRoot, '.git'), `gitdir: ${worktreeGitDir}\n`, 'utf8');
+  writeFileSync(join(mainRoot, 'USER.md'), 'main-checkout-memory', 'utf8');
+
+  assert.equal(resolveMemoryRoot(worktreeRoot), mainRoot);
+  assert.match(loadFreshSessionMemorySnapshot(worktreeRoot), /main-checkout-memory/);
+  rmSync(mainRoot, { recursive: true, force: true });
 });
 
 test('loadFreshSessionMemorySnapshot preserves order and prefers today over yesterday', () => {

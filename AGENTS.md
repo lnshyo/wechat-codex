@@ -52,7 +52,7 @@ The memory-layer files (`USER.md`, `soul.md`, `SESSION-STATE.md`, `MEMORY.md`, `
 
 When the working directory is a linked worktree:
 
-1. Resolve the main checkout root: it is the parent directory of `git rev-parse --path-format=absolute --git-common-dir`.
+1. Resolve the main checkout root: it is the parent directory of `git rev-parse --path-format=absolute --git-common-dir`. Bridge preload code must use the shared `resolveMemoryRoot` helper rather than reimplementing this rule.
 2. Read and write all memory-layer files at the main checkout root, not inside the worktree.
 3. Tracked files (source, `rules/`, `AGENTS.md`, docs) are still edited inside the worktree as usual.
 
@@ -149,4 +149,4 @@ When the change touched any memory-layer Markdown file, also run:
 npm run audit:memory-encoding
 ```
 
-The audit checks encoding hygiene and warns when a startup-preload file exceeds the fresh-session snapshot budget.
+The audit checks encoding hygiene, warns when startup-preload usage reaches 80%, and fails when a file or the total exceeds the fresh-session snapshot budget.

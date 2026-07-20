@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 
 const MAX_MESSAGE_LENGTH = 2048;
 const FRESH_SESSION_MEMORY_BOOTSTRAP_MARKER = '[wechat-codex:fresh-session-memory-bootstrap]';
@@ -12,6 +12,23 @@ export interface FreshSessionMemoryOptions {
   maxTotalChars?: number;
 }
 
+export function resolveMemoryRoot(cwd: string): string {
+  const localGitPath = join(cwd, '.git');
+  try {
+    const gitFile = readFileSync(localGitPath, 'utf8').trim();
+    const match = /^gitdir:\s*(.+)$/i.exec(gitFile);
+    if (!match) {
+      return cwd;
+    }
+
+    const gitDir = isAbsolute(match[1]) ? match[1] : resolve(cwd, match[1]);
+    const commonGitDir = dirname(dirname(gitDir));
+    return dirname(commonGitDir);
+  } catch {
+    return cwd;
+  }
+}
+
 function formatLocalDate(date: Date): string {
   const year = String(date.getFullYear()).padStart(4, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -20,11 +37,12 @@ function formatLocalDate(date: Date): string {
 }
 
 export function getStartupMemoryPaths(cwd: string, now: Date): Array<{ label: string; path: string }> {
+  const memoryRoot = resolveMemoryRoot(cwd);
   const today = formatLocalDate(now);
   const yesterdayDate = new Date(now);
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterday = formatLocalDate(yesterdayDate);
-  const todayPath = join(cwd, 'memory', `${today}.md`);
+  const todayPath = join(memoryRoot, 'memory', `${today}.md`);
   let hasNonEmptyToday = false;
   if (existsSync(todayPath)) {
     try {
@@ -42,7 +60,7 @@ export function getStartupMemoryPaths(cwd: string, now: Date): Array<{ label: st
     dailyLabel,
     'MEMORY.md',
     'memory/CONTEXT.md',
-  ].map((label) => ({ label, path: join(cwd, ...label.split('/')) }));
+  ].map((label) => ({ label, path: join(memoryRoot, ...label.split('/')) }));
 }
 
 export function loadFreshSessionMemorySnapshot(

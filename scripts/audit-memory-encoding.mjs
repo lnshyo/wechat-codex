@@ -7,13 +7,15 @@ import {
   DEFAULT_MAX_MEMORY_FILE_CHARS,
   DEFAULT_MAX_MEMORY_TOTAL_CHARS,
   getStartupMemoryPaths,
+  resolveMemoryRoot,
 } from '../dist/gateway/task-utils.js';
 
 function pad(value, width) {
   return String(value).padEnd(width, ' ');
 }
 
-const root = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
+const requestedRoot = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
+const root = resolveMemoryRoot(requestedRoot);
 const report = auditMemoryMarkdownFiles(root);
 
 console.log(`Memory Markdown encoding audit: ${root}`);
@@ -45,6 +47,8 @@ console.log(`Files with NUL bytes: ${report.summary.filesWithNullBytes}`);
 console.log(`Invalid UTF-8 files: ${report.summary.invalidUtf8Files}`);
 
 const oversizedStartupFiles = [];
+const preloadWarningRatio = 0.8;
+const nearLimitStartupFiles = [];
 let startupTotalChars = 0;
 for (const file of getStartupMemoryPaths(root, new Date())) {
   if (!existsSync(file.path)) {
@@ -54,6 +58,8 @@ for (const file of getStartupMemoryPaths(root, new Date())) {
   startupTotalChars += chars;
   if (chars > DEFAULT_MAX_MEMORY_FILE_CHARS) {
     oversizedStartupFiles.push({ label: file.label, chars });
+  } else if (chars >= DEFAULT_MAX_MEMORY_FILE_CHARS * preloadWarningRatio) {
+    nearLimitStartupFiles.push({ label: file.label, chars });
   }
 }
 
@@ -66,10 +72,23 @@ for (const file of oversizedStartupFiles) {
     `Preload budget exceeded: ${file.label} has ${file.chars} chars and will be truncated in fresh-session bootstraps.`,
   );
 }
+for (const file of nearLimitStartupFiles) {
+  console.warn(
+    `Preload budget warning: ${file.label} uses ${file.chars}/${DEFAULT_MAX_MEMORY_FILE_CHARS} chars (at least 80%).`,
+  );
+}
 const startupTotalExceeded = startupTotalChars > DEFAULT_MAX_MEMORY_TOTAL_CHARS;
 if (startupTotalExceeded) {
   console.error(
     `Preload budget exceeded: startup files total ${startupTotalChars} chars; later files will be truncated or dropped.`,
+  );
+}
+if (
+  !startupTotalExceeded &&
+  startupTotalChars >= DEFAULT_MAX_MEMORY_TOTAL_CHARS * preloadWarningRatio
+) {
+  console.warn(
+    `Preload budget warning: startup files use ${startupTotalChars}/${DEFAULT_MAX_MEMORY_TOTAL_CHARS} total chars (at least 80%).`,
   );
 }
 

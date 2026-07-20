@@ -19,7 +19,7 @@ Bridge a personal WeChat account directly to the local Codex CLI already logged 
 - Direct text-to-Codex routing from personal WeChat
 - WeChat voice messages through the transcription already supplied by WeChat
 - Per-contact thread isolation and FIFO task queueing
-- WeChat image input forwarding
+- WeChat image input forwarding plus automatic local archiving for supported images, videos, voice media, and file attachments
 - Native WeChat typing state with `GENERATING` fallback
 - Local `/sync` mode that mirrors replies from the latest matching Codex Desktop session
 - Local token usage estimation and chat health/status commands
@@ -93,6 +93,19 @@ On Windows this is usually:
 C:\Users\<you>\.wechat-codex\
 ```
 
+## File Storage Policy
+
+- Treat the Windows `Downloads` folder as temporary intake, not permanent project storage.
+- Keep version-controlled project documents under `docs/<topic>/`.
+- Route new personal material handled through this workspace into the ignored root-level `资料库/` tree by purpose: printing, knowledge documents, video evidence, completed summaries, tools, or archive.
+- Keep the library at no more than two directory levels (`category/subcategory/file`); encode source, date, and topic in filenames instead of creating deeper folders.
+- Supported inbound WeChat attachments are archived directly under the matching root-level `资料库/` category. Videos go to `30-视频资料/01-原视频/`, documents to `20-知识文档/其他/`, packages to `50-工具与安装包/`, and images/audio/unknown files to `00-待分类/`.
+- Moving, flattening, or collision-renaming a library file must preserve its exact extension. Collision markers are inserted before the extension, and format conversion creates a separate derivative instead of renaming the original.
+- Obvious credential containers such as `.env`, `.pem`, `.key`, `.p12`, and `.pfx` are not automatically archived.
+- This is a prospective rule; existing historical files are not migrated unless the user requests a separate cleanup task.
+
+See [`rules/file-storage.md`](./rules/file-storage.md) for classification, naming, retention, and migration safety rules.
+
 ## Run
 
 Foreground:
@@ -156,9 +169,9 @@ requires a bridge restart.
 ## How It Works
 
 - Normal WeChat text messages become Codex tasks
-- Voice messages use `voice_item.text`, with the legacy `voice_text` field as fallback; the bridge does not download audio or run local speech-to-text
+- Voice messages use `voice_item.text`, with the legacy `voice_text` field as fallback; when downloadable voice media is present it is archived, but the bridge still does not run local speech-to-text
 - Busy chats queue new work automatically
-- Image messages are downloaded immediately and forwarded when their turn runs
+- Supported media and file attachments are downloaded once, written into the configured working directory's root-level `资料库/`, and forwarded to Codex as image data or local file paths
 - Each WeChat contact gets an isolated Codex conversation and local session state
 - `/sync` can bind a chat to the latest local interactive Codex Desktop session for the configured working directory
 - When a chat is attached, the bridge mirrors only fresh assistant replies created after the bind point
@@ -201,7 +214,7 @@ After setup, verify all of the following:
 4. Two different WeChat contacts do not share context
 5. A queued task can be inspected with `/task`
 6. `/token` returns an estimated token summary for the current chat
-7. An image sent from WeChat can be analyzed by Codex
+7. An image, video, or document sent from WeChat appears in the matching `资料库/` category and can be analyzed by Codex
 8. A WeChat voice message with a platform transcription reaches Codex as text
 9. After sending `/sync` from WeChat, the bridge reports the attached local Codex session source and title, then mirrors only subsequent local assistant replies back to that chat
 
